@@ -8,19 +8,19 @@ import (
 	"os/signal"
 	"syscall"
 	"context"
-	"github.com/go-kratos/kratos/v2/log"
+	stdlog "github.com/go-kratos/kratos/v2/log"
 
 )
 
 type Server struct {
 	conn    *websocket.Conn
 	message chan []byte
-	log *log.Helper
+	log *stdlog.Helper
 }
 
 func NewServer() *Server {
-	logger := log.NewStdLogger()
-	log := log.NewHelper("im_server",logger)
+	logger := stdlog.NewStdLogger(os.Stderr)
+	log := stdlog.NewHelper("im_server",logger)
 	return &Server{
 		conn:    nil,
 		message: make(chan []byte),

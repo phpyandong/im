@@ -9,7 +9,6 @@ package nrpc
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"net/rpc"
@@ -18,14 +17,19 @@ import (
 	"github.com/phpyandong/im/pkg/protobufs/proto"
 	"github.com/phpyandong/im/pkg/protobufs"
 	"github.com/phpyandong/im/conf"
+	"bufio"
+	"fmt"
 )
 
 type clientCodec struct {
-	dec *json.Decoder // for reading JSON values
-	enc *json.Encoder // for writing JSON values
+	conn    io.ReadWriteCloser  // todo net.Conn 不光可读可写可关闭，还包含其他
+	//dec *json.Decoder // for reading JSON values
+	//enc *json.Encoder // for writing JSON values
 	c   io.Closer
 	proto *protobuf.Protobuf
-	trans  *protobufs.Transprot
+	dec  *protobufs.Transprot
+	enc  *protobufs.Transprot
+
 	// temporary work space
 	req  clientRequest
 	resp clientResponse
@@ -37,15 +41,53 @@ type clientCodec struct {
 	mutex   sync.Mutex        // protects pending
 	pending map[uint64]string // map request id to method name
 }
+type proClientCodec struct {
+	rwc    io.ReadWriteCloser
+
+	dec     *protobufs.Transprot
+	enc     *protobufs.Transprot
+
+	encBuf *bufio.Writer
+}
+
+
+func (c *proClientCodec) ReadResponseBody(interface{}) error {
+	fmt.Println("ReadResponseBody: ")
+	return nil
+}
+
+func (c *proClientCodec) WriteRequest(r *rpc.Request, body interface{}) (err error) {
+
+	conf := conf.NewConf()
+	req := &dto.RequestProto{
+		Lookup:    "xx",
+		Method:    r.ServiceMethod,
+		ParamList: nil,
+	}
+	proto := protobuf.NewSendProtobuf(req, conf.Service, int32(r.Seq))
+	protodata, err := proto.ToBytes()
+	if err != nil {
+		return err
+	}
+	_, err = c.enc.Encode(protodata)
+	fmt.Println("==================")
+	return nil
+}
+
 
 // NewClientCodec returns a new rpc.ClientCodec using JSON-RPC on conn.
 func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
-	return &clientCodec{
-		dec:     json.NewDecoder(conn),
-		enc:     json.NewEncoder(conn),
-		c:       conn,
-		pending: make(map[uint64]string),
-		trans: &protobufs.Transprot{},
+	encBuf := bufio.NewWriter(conn)
+
+	return &proClientCodec{
+		//dec:     json.NewDecoder(conn),
+		//enc:     json.NewEncoder(conn),
+		rwc:       conn,
+		//pending: make(map[uint64]string),
+		dec: &protobufs.Transprot{EncBuf:conn},
+		enc: &protobufs.Transprot{EncBuf:conn},
+		encBuf:encBuf,
+
 	}
 }
 
@@ -55,31 +97,31 @@ type clientRequest struct {
 	Id     uint64         `json:"id"`
 }
 
-func (c *clientCodec) WriteRequest(r *rpc.Request, param interface{}) error {
-	fmt.Println("========writeRequest============")
-	c.mutex.Lock()
-	c.pending[r.Seq] = r.ServiceMethod
-	c.mutex.Unlock()
-	c.req.Method = r.ServiceMethod
-	c.req.Params[0] = param
-	c.req.Id = r.Seq
-	req := &dto.RequestProto{
-		Lookup:"xx",
-		Method: r.ServiceMethod,
-		ParamList:nil,
-	}
-	conf := conf.NewConf()
-	proto := protobuf.NewSendProtobuf(req,conf.Service,int32(r.Seq))
-	protodata,err := proto.ToBytes()
-	if err != nil {
-		return err
-	}
-	_,err = c.trans.Encode(protodata)
-
-	fmt.Println(c.trans.Data)
-
-	return c.enc.Encode(&c.req)
-}
+//func (c *clientCodec) WriteRequest(r *rpc.Request, param interface{}) error {
+//	fmt.Println("========writeRequest============")
+//	c.mutex.Lock()
+//	c.pending[r.Seq] = r.ServiceMethod
+//	c.mutex.Unlock()
+//	c.req.Method = r.ServiceMethod
+//	c.req.Params[0] = param
+//	c.req.Id = r.Seq
+//	req := &dto.RequestProto{
+//		Lookup:"xx",
+//		Method: r.ServiceMethod,
+//		ParamList:nil,
+//	}
+//	conf := conf.NewConf()
+//	proto := protobuf.NewSendProtobuf(req,conf.Service,int32(r.Seq))
+//	protodata,err := proto.ToBytes()
+//	if err != nil {
+//		return err
+//	}
+//	_,err = c.trans.Encode(protodata)
+//
+//	fmt.Println(c.trans.Data)
+//
+//	return c.enc.Encode(&c.req)
+//}
 
 type clientResponse struct {
 	Id     uint64           `json:"id"`
@@ -93,29 +135,29 @@ func (r *clientResponse) reset() {
 	r.Error = nil
 }
 
-func (c *clientCodec) ReadResponseHeader(r *rpc.Response) error {
-	c.resp.reset()
-	if err := c.dec.Decode(&c.resp); err != nil {
-		return err
-	}
-
-	c.mutex.Lock()
-	r.ServiceMethod = c.pending[c.resp.Id]
-	delete(c.pending, c.resp.Id)
-	c.mutex.Unlock()
-
-	r.Error = ""
-	r.Seq = c.resp.Id
-	if c.resp.Error != nil || c.resp.Result == nil {
-		x, ok := c.resp.Error.(string)
-		if !ok {
-			return fmt.Errorf("invalid error %v", c.resp.Error)
-		}
-		if x == "" {
-			x = "unspecified error"
-		}
-		r.Error = x
-	}
+func (c *proClientCodec) ReadResponseHeader(r *rpc.Response) error {
+	//c.resp.reset()
+	//if err := c.dec.Decode(&c.resp); err != nil {
+	//	return err
+	//}
+	//
+	//c.mutex.Lock()
+	//r.ServiceMethod = c.pending[c.resp.Id]
+	//delete(c.pending, c.resp.Id)
+	//c.mutex.Unlock()
+	//
+	//r.Error = ""
+	//r.Seq = c.resp.Id
+	//if c.resp.Error != nil || c.resp.Result == nil {
+	//	x, ok := c.resp.Error.(string)
+	//	if !ok {
+	//		return fmt.Errorf("invalid error %v", c.resp.Error)
+	//	}
+	//	if x == "" {
+	//		x = "unspecified error"
+	//	}
+	//	r.Error = x
+	//}
 	return nil
 }
 
@@ -126,8 +168,9 @@ func (c *clientCodec) ReadResponseBody(x interface{}) error {
 	return json.Unmarshal(*c.resp.Result, x)
 }
 
-func (c *clientCodec) Close() error {
-	return c.c.Close()
+func (c *proClientCodec) Close() error {
+	//return c.c.Close()
+	return nil
 }
 
 // NewClient returns a new rpc.Client to handle requests to the

@@ -4,11 +4,11 @@ import (
 	"io"
 	"errors"
 	"encoding/binary"
-	"bufio"
+	"fmt"
 )
 
 type Transprot struct {
-	encBuf *bufio.Writer
+	EncBuf io.ReadWriteCloser
 	Data []byte
 }
 func (t *Transprot) Write(p []byte) (int, error) {
@@ -52,13 +52,33 @@ func (transprot *Transprot) Encode(data []byte)([]byte,error){
 	copy(transportData[LenHead+LenData:totalLen-LenEnd],data)
 	//数据尾部
 	copy(transportData[totalLen-LenEnd:totalLen],ProtoEndBytes)
-	if _, err := transprot.Write(transportData); err != nil {
+	if _, err := transprot.EncBuf.Write(transportData); err != nil {
 		return nil,err
 	}
 
 	return transportData,nil
 }
+func (transprot *Transprot) Decode()([]byte,error) {
+	data := make([]byte,100)
+	//for {
+		i,err := transprot.EncBuf.Read(data)
+	if err == nil {
+		fmt.Printf("trans len :%v ,data:%v \n  ",i,data)
 
+		//panic(err)
+		//return nil,nil
+	}
+
+	//fmt.Printf("trans len :%v ,data:%v \n  ",i,data)
+	//
+	//if i>0 && len(data)>10 {
+	//		fmt.Printf("trans len :%v ,data:%v \n  ",i,transprot.Data)
+	//	//}
+	//}
+
+
+	return nil,nil
+}
 /**
 | header |  header  	| data                 |  end  |
 | begin  |  serial 		| EventType| RetData   |  end  |

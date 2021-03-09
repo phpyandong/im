@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"bufio"
 )
 
 type Args struct {
@@ -116,6 +117,15 @@ func TestServer(t *testing.T) {
 	go ServeConn(srv)
 	dec := json.NewDecoder(cli)
 
+	input := bufio.NewReader(srv)
+	for {
+		bytes, _, err := input.ReadLine()
+		if err != nil {
+			//fmt.Printf("read line faild err:%v\n", err)
+		}else{
+			fmt.Println(bytes)
+		}
+	}
 	// Send hand-coded requests to server, parse responses.
 	for i := 0; i < 10; i++ {
 		fmt.Fprintf(cli, `{"method": "Arith.Add", "id": "\u%04d", "params": [{"A": %d, "B": %d}]}`, i, i, i+1)
@@ -134,6 +144,7 @@ func TestServer(t *testing.T) {
 			t.Fatalf("resp: bad result: %d+%d=%d", i, i+1, resp.Result.C)
 		}
 	}
+	select{}
 }
 
 func TestClient(t *testing.T) {

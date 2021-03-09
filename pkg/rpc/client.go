@@ -209,8 +209,10 @@ func NewClientWithCodec(codec ClientCodec) *Client {
 
 type gobClientCodec struct {
 	rwc    io.ReadWriteCloser
+
 	dec    *gob.Decoder
 	enc    *gob.Encoder
+
 	encBuf *bufio.Writer
 }
 

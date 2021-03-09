@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package jsonrpc
+package nrpc
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/rpc"
 	"sync"
+	"github.com/phpyandong/im/pkg/protobufs"
 )
 
 var errMissingParams = errors.New("jsonrpc: request body missing params")
@@ -17,6 +18,7 @@ var errMissingParams = errors.New("jsonrpc: request body missing params")
 type serverCodec struct {
 	dec *json.Decoder // for reading JSON values
 	enc *json.Encoder // for writing JSON values
+	trans  *protobufs.Transprot
 	c   io.Closer
 
 	// temporary work space
@@ -119,6 +121,7 @@ func (c *serverCodec) WriteResponse(r *rpc.Response, x interface{}) error {
 	} else {
 		resp.Error = r.Error
 	}
+
 	return c.enc.Encode(resp)
 }
 

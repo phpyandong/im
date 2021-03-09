@@ -5,7 +5,7 @@
 // Package jsonrpc implements a JSON-RPC 1.0 ClientCodec and ServerCodec
 // for the rpc package.
 // For JSON-RPC 2.0 support, see https://godoc.org/?q=json-rpc+2.0
-package jsonrpc
+package nrpc
 
 import (
 	"encoding/json"
@@ -14,13 +14,18 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
+	"github.com/phpyandong/im/pkg/protobufs/protobuf"
+	"github.com/phpyandong/im/pkg/protobufs/proto"
+	"github.com/phpyandong/im/pkg/protobufs"
+	"github.com/phpyandong/im/conf"
 )
 
 type clientCodec struct {
 	dec *json.Decoder // for reading JSON values
 	enc *json.Encoder // for writing JSON values
 	c   io.Closer
-
+	proto *protobuf.Protobuf
+	trans  *protobufs.Transprot
 	// temporary work space
 	req  clientRequest
 	resp clientResponse
@@ -40,6 +45,7 @@ func NewClientCodec(conn io.ReadWriteCloser) rpc.ClientCodec {
 		enc:     json.NewEncoder(conn),
 		c:       conn,
 		pending: make(map[uint64]string),
+		trans: &protobufs.Transprot{},
 	}
 }
 
@@ -50,12 +56,28 @@ type clientRequest struct {
 }
 
 func (c *clientCodec) WriteRequest(r *rpc.Request, param interface{}) error {
+	fmt.Println("========writeRequest============")
 	c.mutex.Lock()
 	c.pending[r.Seq] = r.ServiceMethod
 	c.mutex.Unlock()
 	c.req.Method = r.ServiceMethod
 	c.req.Params[0] = param
 	c.req.Id = r.Seq
+	req := &dto.RequestProto{
+		Lookup:"xx",
+		Method: r.ServiceMethod,
+		ParamList:nil,
+	}
+	conf := conf.NewConf()
+	proto := protobuf.NewSendProtobuf(req,conf.Service,int32(r.Seq))
+	protodata,err := proto.ToBytes()
+	if err != nil {
+		return err
+	}
+	_,err = c.trans.Encode(protodata)
+
+	fmt.Println(c.trans.Data)
+
 	return c.enc.Encode(&c.req)
 }
 

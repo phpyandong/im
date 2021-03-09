@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package jsonrpc
+package nrpc
 
 import (
 	"bytes"
@@ -156,49 +156,49 @@ func TestClient(t *testing.T) {
 		t.Errorf("Add: got %d expected %d", reply.C, args.A+args.B)
 	}
 
-	args = &Args{7, 8}
-	reply = new(Reply)
-	err = client.Call("Arith.Mul", args, reply)
-	if err != nil {
-		t.Errorf("Mul: expected no error but got string %q", err.Error())
-	}
-	if reply.C != args.A*args.B {
-		t.Errorf("Mul: got %d expected %d", reply.C, args.A*args.B)
-	}
-
-	// Out of order.
-	args = &Args{7, 8}
-	mulReply := new(Reply)
-	mulCall := client.Go("Arith.Mul", args, mulReply, nil)
-	addReply := new(Reply)
-	addCall := client.Go("Arith.Add", args, addReply, nil)
-
-	addCall = <-addCall.Done
-	if addCall.Error != nil {
-		t.Errorf("Add: expected no error but got string %q", addCall.Error.Error())
-	}
-	if addReply.C != args.A+args.B {
-		t.Errorf("Add: got %d expected %d", addReply.C, args.A+args.B)
-	}
-
-	mulCall = <-mulCall.Done
-	if mulCall.Error != nil {
-		t.Errorf("Mul: expected no error but got string %q", mulCall.Error.Error())
-	}
-	if mulReply.C != args.A*args.B {
-		t.Errorf("Mul: got %d expected %d", mulReply.C, args.A*args.B)
-	}
+	//args = &Args{7, 8}
+	//reply = new(Reply)
+	//err = client.Call("Arith.Mul", args, reply)
+	//if err != nil {
+	//	t.Errorf("Mul: expected no error but got string %q", err.Error())
+	//}
+	//if reply.C != args.A*args.B {
+	//	t.Errorf("Mul: got %d expected %d", reply.C, args.A*args.B)
+	//}
+	//
+	//// Out of order.
+	//args = &Args{7, 8}
+	//mulReply := new(Reply)
+	//mulCall := client.Go("Arith.Mul", args, mulReply, nil)
+	//addReply := new(Reply)
+	//addCall := client.Go("Arith.Add", args, addReply, nil)
+	//
+	//addCall = <-addCall.Done
+	//if addCall.Error != nil {
+	//	t.Errorf("Add: expected no error but got string %q", addCall.Error.Error())
+	//}
+	//if addReply.C != args.A+args.B {
+	//	t.Errorf("Add: got %d expected %d", addReply.C, args.A+args.B)
+	//}
+	//
+	//mulCall = <-mulCall.Done
+	//if mulCall.Error != nil {
+	//	t.Errorf("Mul: expected no error but got string %q", mulCall.Error.Error())
+	//}
+	//if mulReply.C != args.A*args.B {
+	//	t.Errorf("Mul: got %d expected %d", mulReply.C, args.A*args.B)
+	//}
 
 	// Error test
-	args = &Args{7, 0}
-	reply = new(Reply)
-	err = client.Call("Arith.Div", args, reply)
-	// expect an error: zero divide
-	if err == nil {
-		t.Error("Div: expected error")
-	} else if err.Error() != "divide by zero" {
-		t.Error("Div: expected divide by zero error; got", err)
-	}
+	//args = &Args{7, 0}
+	//reply = new(Reply)
+	//err = client.Call("Arith.Div", args, reply)
+	//// expect an error: zero divide
+	//if err == nil {
+	//	t.Error("Div: expected error")
+	//} else if err.Error() != "divide by zero" {
+	//	t.Error("Div: expected divide by zero error; got", err)
+	//}
 }
 
 func TestBuiltinTypes(t *testing.T) {

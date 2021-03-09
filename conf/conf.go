@@ -1,11 +1,25 @@
-package model
+package conf
+
+import "time"
 
 type Conf struct {
 	Registry *RegistryConf `json:"registry"`
 	Comet    *CometConf    `json:"comet"`
 	Logic    *LogicConf    `json:"logic"`
+	Service *ServiceConf `json:"service"`
 }
-
+type ServiceConf struct {
+	ServiceName string
+	ServiceId   byte
+	Servers     []Server
+}
+type Server struct {
+	Name        string
+	Host        string
+	Port        int
+	DeadTimeout time.Duration
+	WeightRate  int
+}
 type RegistryConf struct {
 	Host          string `json:"host"`
 	Port          string `json:"port"`
@@ -31,6 +45,7 @@ type LogicConf struct {
 }
 
 func NewConf() *Conf {
+	server := Server{Name:"ImComet",Host:"127.0.0.1",Port:7171,DeadTimeout:time.Second,WeightRate:1}
 	return &Conf{
 		Registry: &RegistryConf{
 			Host:          "127.0.0.1",
@@ -52,6 +67,11 @@ func NewConf() *Conf {
 			HBRegistry: 60,
 			HBWatchReg: 3,
 			CliBckCnt:  1024,
+		},
+		Service: &ServiceConf{
+			ServiceName:"imComet",
+			ServiceId:1,
+			Servers :[]Server{server},
 		},
 	}
 }
